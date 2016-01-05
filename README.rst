@@ -22,15 +22,6 @@ That outputs to the supplied logger::
   this is an optional detail: syscall failed
   also an optional hint to do yadda yadda
 
-Or in json format::
-
-  {
-    level: 'INFO',
-    primary: 'this is the primary message: 12345',
-    detail: 'this is an optional detail: syscall failed',
-    hint: 'also an optional hint to do yadda yadda'
-  }
-
 But you can always fallback to::
 
   logger.info('this is a regular log call %d', 12345)
@@ -47,4 +38,5 @@ Throttling::
 Outputs the first 1000 calls, and then::
 
   (...throttled 2342 log lines...)
+  
   then what happens?

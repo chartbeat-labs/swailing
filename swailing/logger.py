@@ -16,36 +16,50 @@ class Logger(object):
         else:
             self._tb = None
 
-        if isinstance(name_or_logger, logging.Logger):
-            self._logger = name_or_logger
-        else:
+        if isinstance(name_or_logger, basestring):
             self._logger = logging.getLogger(name_or_logger)
+        else:
+            self._logger = name_or_logger
 
     def debug(self, msg=None, *args, **kwargs):
-        return self._log(logging.DEBUG, msg, *args, **kwargs)
+        return self._log(logging.DEBUG, msg, args, kwargs)
 
     def info(self, msg=None, *args, **kwargs):
-        return self._log(logging.INFO, msg, *args, **kwargs)
+        return self._log(logging.INFO, msg, args, kwargs)
 
     def warning(self, msg=None, *args, **kwargs):
-        return self._log(logging.WARNING, msg, *args, **kwargs)
+        return self._log(logging.WARNING, msg, args, kwargs)
 
     def error(self, msg=None, *args, **kwargs):
-        return self._log(logging.ERROR, msg, *args, **kwargs)
+        return self._log(logging.ERROR, msg, args, kwargs)
 
     def critical(self, msg=None, *args, **kwargs):
-        return self._log(logging.CRITICAL, msg, *args, **kwargs)
+        return self._log(logging.CRITICAL, msg, args, kwargs)
 
     def log(self, level, msg=None, *args, **kwargs):
-        return self._log(level, msg, *args, **kwargs)
+        return self._log(level, msg, args, kwargs)
 
 
-    def _log(self, level, msg, *args, **kwargs):
-        # FIXME WORKING HERE: add throttling
-        if msg is not None:
-            self._logger.log(level, msg, *args, **kwargs)
+    def _log(self, level, msg, args, kwargs):
+        throttled = self._tb.throttle_count
 
-        return FancyLogContext(self._logger, level)
+        if self._tb.check_and_consume():
+            if throttled > 0:
+                self._logger.log(level, "")
+                self._logger.log(
+                    level,
+                    "(... throttled %d messages ...)",
+                    throttled,
+                )
+                self._logger.log(level, "")
+
+            if msg is not None:
+                self._logger.log(level, msg, *args, **kwargs)
+
+            return FancyLogContext(self._logger, level)
+        else:
+            return NoopLogContext()
+
 
 class FancyLogContext(object):
     def __init__(self, logger, level):
@@ -78,3 +92,22 @@ class FancyLogContext(object):
 
     def hint(self, msg, *args, **kwargs):
         self._log['hint'] = (msg, args, kwargs)
+
+
+class NoopLogContext(object):
+    """Fakes a FancyLogContext but does nothing."""
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        pass
+
+    def primary(self, msg, *args, **kwargs):
+        pass
+
+    def detail(self, msg, *args, **kwargs):
+        pass
+
+    def hint(self, msg, *args, **kwargs):
+        pass

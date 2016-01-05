@@ -1,8 +1,10 @@
 
+import logging
 import unittest
 
 import mock
 
+import swailing.logger
 import swailing.token_bucket
 from swailing.token_bucket import TokenBucket
 
@@ -58,3 +60,94 @@ class TokenBucketTest(unittest.TestCase):
         clock.return_value += 1
         tb.check_and_consume()
         self.assertEqual(tb.throttle_count, 0)
+
+
+class LoggerTest(unittest.TestCase):
+    def test_fallback(self):
+        mock_logger = mock.Mock()
+        logger = swailing.Logger(mock_logger, 10, 100)
+
+        logger.info("hello world!")
+        mock_logger.log.assert_called_with(
+            logging.INFO,
+            "hello world!",
+        )
+
+    def test_context(self):
+        mock_logger = mock.Mock()
+        logger = swailing.Logger(mock_logger, 10, 100)
+        with logger.info() as L:
+            L.primary("primary")
+            L.detail("detail")
+            L.hint("hint")
+
+        calls = [
+            mock.call(logging.INFO, "primary"),
+            mock.call(logging.INFO, "detail"),
+            mock.call(logging.INFO, "hint"),
+        ]
+        mock_logger.log.assert_has_calls(calls)
+
+    @mock.patch('swailing.token_bucket.time.time')
+    def test_throttle(self, clock):
+        mock_logger = mock.Mock()
+        clock.return_value = 1
+        logger = swailing.Logger(mock_logger, 1, 2)
+
+        # We'll write a buch of times, but since capacity is just 2,
+        # we should expect the root_logger to only have been called
+        # twice.
+        for i in xrange(10):
+            with logger.info() as L:
+                L.primary("primary %d" % i)
+                L.detail("detail %d" % i)
+                L.hint("hint %d" % i)
+
+        calls = [
+            mock.call(logging.INFO, "primary 0"),
+            mock.call(logging.INFO, "detail 0"),
+            mock.call(logging.INFO, "hint 0"),
+
+            mock.call(logging.INFO, "primary 1"),
+            mock.call(logging.INFO, "detail 1"),
+            mock.call(logging.INFO, "hint 1"),
+        ]
+        mock_logger.log.assert_has_calls(calls)
+
+
+        # Now let's wait a second so we get one more token, then run test again.
+        clock.return_value += 1
+        mock_logger.reset_mock()
+
+        for i in xrange(10):
+            with logger.info() as L:
+                L.primary("primary %d" % i)
+                L.detail("detail %d" % i)
+                L.hint("hint %d" % i)
+
+        calls = [
+            mock.call(logging.INFO, "primary 0"),
+            mock.call(logging.INFO, "detail 0"),
+            mock.call(logging.INFO, "hint 0"),
+        ]
+        mock_logger.log.assert_has_calls(calls)
+
+
+        # Force a throttle message.
+        clock.return_value += 100
+        mock_logger = mock.Mock()
+        logging.basicConfig()
+        logger = swailing.Logger(mock_logger, 1, 1)
+        for i in xrange(10):
+            logger.error("foo")
+        clock.return_value += 100
+        logger.error("bar")
+
+        calls = [
+            mock.call(logging.ERROR, "foo"),
+            mock.call(logging.ERROR, ""),
+            mock.call(logging.ERROR, "(... throttled %d messages ...)", 9),
+            mock.call(logging.ERROR, ""),
+            mock.call(logging.ERROR, "bar"),
+        ]
+        mock_logger.log.assert_has_calls(calls)
