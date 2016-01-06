@@ -58,6 +58,23 @@ But you can always fallback to regular style logging:
 logger.info('this is a regular log call %d', 12345)
 ```
 
+You can silence details and hints at runtime by setting the verbosity:
+
+```python
+logger.set_verbosity(swailing.PRIMARY)
+
+with logger.info() as L:
+    L.primary('this is the primary message: %d', 12345)
+    L.detail('this is an optional detail: %s failed', 'syscall')
+    L.hint('also an optional hint to do yadda yadda')
+```
+
+Outputs:
+
+```
+this is the primary message: 12345
+```
+
 Throttling:
 
 ```python

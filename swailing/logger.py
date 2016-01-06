@@ -6,12 +6,17 @@ from contextlib import contextmanager
 from swailing.token_bucket import TokenBucket
 
 
+PRIMARY = 10
+DETAIL = 20
+HINT = 30
+
+
 class Logger(object):
     """A logging.Logger-like object with some swailing goodness.
 
     """
 
-    def __init__(self, name_or_logger, fill_rate=None, capacity=None):
+    def __init__(self, name_or_logger, fill_rate=None, capacity=None, verbosity=HINT):
         """Set up Logger-like object with some swailing goodness.
 
         name_or_logger is either a (possibly unicode) string or a
@@ -23,6 +28,11 @@ class Logger(object):
 
         capacity is the maximum number of tokens the Logger is allowed
         to have accumulated.
+
+        verbosity is the initial verbosity level (defaults to HINT).
+        Setting it to PRIMARY will stop detail and hint outputs.
+        Setting it to DETAIL will stop hint outputs. Setting it to
+        HINT allows all output.
 
         """
 
@@ -36,6 +46,8 @@ class Logger(object):
             self._logger = logging.getLogger(name_or_logger)
         else:
             self._logger = name_or_logger
+
+        self._verbosity = verbosity
 
     def debug(self, msg=None, *args, **kwargs):
         """Write log at DEBUG level. Same arguments as Python's built-in
@@ -70,6 +82,9 @@ class Logger(object):
 
         return self._log(level, msg, args, kwargs)
 
+    def set_verbosity(self, level):
+        self._verbosity = level
+
 
     def _log(self, level, msg, args, kwargs):
         """Throttled log output."""
@@ -95,7 +110,7 @@ class Logger(object):
             if msg is not None:
                 self._logger.log(level, msg, *args, **kwargs)
 
-            return FancyLogContext(self._logger, level)
+            return FancyLogContext(self._logger, level, self._verbosity)
         else:
             return NoopLogContext()
 
@@ -106,9 +121,10 @@ class FancyLogContext(object):
 
     """
 
-    def __init__(self, logger, level):
+    def __init__(self, logger, level, verbosity):
         self._logger = logger
         self._level = level
+        self._verbosity = verbosity
         self._log = {}
 
     def __enter__(self):
@@ -120,22 +136,20 @@ class FancyLogContext(object):
         if exc_type or exc_value or traceback:
             return
 
-        for log_message in ['primary', 'detail', 'hint']:
-            info = self._log.get(log_message)
-            if not info:
-                continue
-
-            msg, args, kwargs = info
+        for msg, args, kwargs in self._log.values():
             self._logger.log(self._level, msg, *args, **kwargs)
 
     def primary(self, msg, *args, **kwargs):
-        self._log['primary'] = (msg, args, kwargs)
+        if self._verbosity >= PRIMARY:
+            self._log[PRIMARY] = (msg, args, kwargs)
 
     def detail(self, msg, *args, **kwargs):
-        self._log['detail'] = (msg, args, kwargs)
+        if self._verbosity >= DETAIL:
+            self._log[DETAIL] = (msg, args, kwargs)
 
     def hint(self, msg, *args, **kwargs):
-        self._log['hint'] = (msg, args, kwargs)
+        if self._verbosity >= HINT:
+            self._log[HINT] = (msg, args, kwargs)
 
 
 class NoopLogContext(object):

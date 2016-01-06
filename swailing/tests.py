@@ -168,3 +168,43 @@ class LoggerTest(unittest.TestCase):
             mock.call(logging.ERROR, "bar"),
         ]
         mock_logger.log.assert_has_calls(calls)
+
+    def test_verbosity(self):
+        mock_logger = mock.Mock()
+        logger = swailing.Logger(mock_logger, 10, 100, verbosity=swailing.PRIMARY)
+        with logger.info() as L:
+            L.primary("primary")
+            L.detail("detail")
+            L.hint("hint")
+
+        calls = [
+            mock.call(logging.INFO, "primary"),
+        ]
+        self.assertEqual(mock_logger.log.mock_calls, calls)
+
+        mock_logger = mock.Mock()
+        logger = swailing.Logger(mock_logger, 10, 100, verbosity=swailing.DETAIL)
+        with logger.info() as L:
+            L.primary("primary")
+            L.detail("detail")
+            L.hint("hint")
+
+        calls = [
+            mock.call(logging.INFO, "primary"),
+            mock.call(logging.INFO, "detail"),
+        ]
+        self.assertEqual(mock_logger.log.mock_calls, calls)
+
+        mock_logger = mock.Mock()
+        logger = swailing.Logger(mock_logger, 10, 100, verbosity=swailing.HINT)
+        with logger.info() as L:
+            L.primary("primary")
+            L.detail("detail")
+            L.hint("hint")
+
+        calls = [
+            mock.call(logging.INFO, "primary"),
+            mock.call(logging.INFO, "detail"),
+            mock.call(logging.INFO, "hint"),
+        ]
+        self.assertEqual(mock_logger.log.mock_calls, calls)
