@@ -88,6 +88,23 @@ class LoggerTest(unittest.TestCase):
         ]
         mock_logger.log.assert_has_calls(calls)
 
+    def test_no_rate(self):
+        """Simple test without rate limiting."""
+
+        mock_logger = mock.Mock()
+        logger = swailing.Logger(mock_logger)
+        with logger.info() as L:
+            L.primary("primary")
+            L.detail("detail")
+            L.hint("hint")
+
+        calls = [
+            mock.call(logging.INFO, "primary"),
+            mock.call(logging.INFO, "detail"),
+            mock.call(logging.INFO, "hint"),
+        ]
+        mock_logger.log.assert_has_calls(calls)
+
     @mock.patch('swailing.token_bucket.time.time')
     def test_throttle(self, clock):
         mock_logger = mock.Mock()

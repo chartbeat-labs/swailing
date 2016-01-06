@@ -41,9 +41,14 @@ class Logger(object):
 
 
     def _log(self, level, msg, args, kwargs):
-        throttled = self._tb.throttle_count
+        if self._tb is None:
+            throttled = 0
+            should_log = True
+        else:
+            throttled = self._tb.throttle_count
+            should_log = self._tb.check_and_consume()
 
-        if self._tb.check_and_consume():
+        if should_log:
             if throttled > 0:
                 self._logger.log(level, "")
                 self._logger.log(
