@@ -1,5 +1,6 @@
 
 import logging
+import threading
 from contextlib import contextmanager
 
 from swailing.token_bucket import TokenBucket
@@ -11,10 +12,25 @@ class Logger(object):
     """
 
     def __init__(self, name_or_logger, fill_rate=None, capacity=None):
+        """Set up Logger-like object with some swailing goodness.
+
+        name_or_logger is either a (possibly unicode) string or a
+        logging.Logger-like object. If supplied as a string, we simply
+        use logging.getLogger.
+
+        fill_rate is the number of tokens per second Logger
+        accumulates. Each log output consumes one token.
+
+        capacity is the maximum number of tokens the Logger is allowed
+        to have accumulated.
+
+        """
+
         if fill_rate and capacity:
             self._tb = TokenBucket(fill_rate, capacity)
         else:
             self._tb = None
+        self._tb_lock = threading.Lock()
 
         if isinstance(name_or_logger, basestring):
             self._logger = logging.getLogger(name_or_logger)
@@ -22,31 +38,49 @@ class Logger(object):
             self._logger = name_or_logger
 
     def debug(self, msg=None, *args, **kwargs):
+        """Write log at DEBUG level. Same arguments as Python's built-in
+        Logger.
+
+        """
+
         return self._log(logging.DEBUG, msg, args, kwargs)
 
     def info(self, msg=None, *args, **kwargs):
+        """Similar to DEBUG but at INFO level."""
+
         return self._log(logging.INFO, msg, args, kwargs)
 
     def warning(self, msg=None, *args, **kwargs):
+        """Similar to DEBUG but at WARNING level."""
+
         return self._log(logging.WARNING, msg, args, kwargs)
 
     def error(self, msg=None, *args, **kwargs):
+        """Similar to DEBUG but at ERROR level."""
+
         return self._log(logging.ERROR, msg, args, kwargs)
 
     def critical(self, msg=None, *args, **kwargs):
+        """Similar to DEBUG but at CRITICAL level."""
+
         return self._log(logging.CRITICAL, msg, args, kwargs)
 
     def log(self, level, msg=None, *args, **kwargs):
+        """Writes log out at any arbitray level."""
+
         return self._log(level, msg, args, kwargs)
 
 
     def _log(self, level, msg, args, kwargs):
-        if self._tb is None:
-            throttled = 0
-            should_log = True
-        else:
-            throttled = self._tb.throttle_count
-            should_log = self._tb.check_and_consume()
+        """Throttled log output."""
+
+        with self._tb_lock:
+            if self._tb is None:
+                throttled = 0
+                should_log = True
+            else:
+                throttled = self._tb.throttle_count
+                should_log = self._tb.check_and_consume()
 
         if should_log:
             if throttled > 0:
@@ -67,6 +101,11 @@ class Logger(object):
 
 
 class FancyLogContext(object):
+    """Accepts primary, detail, and hint log statements and outputs them
+    when the context exits without error.
+
+    """
+
     def __init__(self, logger, level):
         self._logger = logger
         self._level = level

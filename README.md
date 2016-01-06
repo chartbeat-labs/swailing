@@ -4,7 +4,7 @@ Swailing
 An opinionated logging library for applications that produce a
 debilitating amount of log output.
 
-Uses the
+Swailing uses the
 [token bucket algorithm](https://en.wikipedia.org/wiki/Token_bucket)
 and provides facilities for
 [PostgreSQL style error logs](http://www.postgresql.org/docs/9.4/static/error-style-guide.html).
@@ -36,7 +36,7 @@ Usage
 ----
 
 ```python
-logger = swailing.Logger(name or logging.Logger)
+logger = swailing.Logger(logging.getLogger())
 
 with logger.info() as L:
     L.primary('this is the primary message: %d', 12345)
