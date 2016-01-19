@@ -3,13 +3,13 @@ from setuptools import setup
 setup(
     name="swailing",
     version="0.1",
+    packages=['swailing'],
     author="Wes Chow",
     author_email="wes@chartbeat.com",
     description=("Logging library for apps that produce debilitating amounts of log output."),
     license="Apache",
     keywords="logging",
     url="https://github.com/chartbeat-labs/swailing",
-    py_modules=['swailing'],
     long_description="""
 An opinionated logging library for applications that produce a debilitating amount of log output.
 
