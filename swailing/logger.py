@@ -1,5 +1,6 @@
 
 import logging
+import json
 import threading
 from contextlib import contextmanager
 
@@ -16,7 +17,13 @@ class Logger(object):
 
     """
 
-    def __init__(self, name_or_logger, fill_rate=None, capacity=None, verbosity=HINT):
+    def __init__(self,
+                 name_or_logger,
+                 fill_rate=None,
+                 capacity=None,
+                 verbosity=HINT,
+                 structured_detail=True,
+                 with_prefix=True):
         """Set up Logger-like object with some swailing goodness.
 
         name_or_logger is either a (possibly unicode) string or a
@@ -34,6 +41,13 @@ class Logger(object):
         Setting it to DETAIL will stop hint outputs. Setting it to
         HINT allows all output.
 
+        When structured_detail is True, FancyLogContext.detail(msg) expects
+        msg to be a dict and json dumps it when logging.
+
+        When with_prefix is True, FancyLogContext.detail and
+        FancyLogContext.hint will prefix their output with "DETAIL: " and
+        "HINT: ", respectively.
+
         """
 
         if fill_rate and capacity:
@@ -48,6 +62,8 @@ class Logger(object):
             self._logger = name_or_logger
 
         self._verbosity = verbosity
+        self._structured_detail = structured_detail
+        self._with_prefix = with_prefix
 
     def debug(self, msg=None, *args, **kwargs):
         """Write log at DEBUG level. Same arguments as Python's built-in
@@ -118,7 +134,11 @@ class Logger(object):
             if msg is not None:
                 self._logger.log(level, msg, *args, **kwargs)
 
-            return FancyLogContext(self._logger, level, self._verbosity)
+            return FancyLogContext(self._logger,
+                                   level,
+                                   self._verbosity,
+                                   self._structured_detail,
+                                   self._with_prefix)
         else:
             return NoopLogContext()
 
@@ -129,11 +149,18 @@ class FancyLogContext(object):
 
     """
 
-    def __init__(self, logger, level, verbosity):
+    def __init__(self,
+                 logger,
+                 level,
+                 verbosity,
+                 structured_detail,
+                 with_prefix):
         self._logger = logger
         self._level = level
         self._verbosity = verbosity
         self._log = {}
+        self._structured_detail = structured_detail
+        self._with_prefix = with_prefix
 
     def __enter__(self):
         return self
@@ -152,12 +179,19 @@ class FancyLogContext(object):
             self._log[PRIMARY] = (msg, args, kwargs)
 
     def detail(self, msg, *args, **kwargs):
+        spec = 'DETAIL: %s' if self._with_prefix else '%s'
         if self._verbosity >= DETAIL:
+            if self._structured_detail:
+                msg = spec % json.dumps(msg)
+            else:
+                msg = spec % msg
+
             self._log[DETAIL] = (msg, args, kwargs)
 
     def hint(self, msg, *args, **kwargs):
+        spec = 'HINT: %s' if self._with_prefix else '%s'
         if self._verbosity >= HINT:
-            self._log[HINT] = (msg, args, kwargs)
+            self._log[HINT] = (spec % msg, args, kwargs)
 
 
 class NoopLogContext(object):
