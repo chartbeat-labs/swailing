@@ -72,6 +72,14 @@ class Logger(object):
 
         return self._log(logging.ERROR, msg, args, kwargs)
 
+    def exception(self, msg=None, *args, **kwargs):
+        """Similar to DEBUG but at ERROR level with exc_info set.
+
+        https://github.com/python/cpython/blob/2.7/Lib/logging/__init__.py#L1472
+        """
+        kwargs['exc_info'] = 1
+        return self._log(logging.ERROR, msg, args, kwargs)
+
     def critical(self, msg=None, *args, **kwargs):
         """Similar to DEBUG but at CRITICAL level."""
 
