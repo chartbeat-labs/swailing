@@ -22,7 +22,7 @@ class Logger(object):
                  fill_rate=None,
                  capacity=None,
                  verbosity=HINT,
-                 structured_detail=True,
+                 structured_detail=False,
                  with_prefix=True):
         """Set up Logger-like object with some swailing goodness.
 
@@ -41,13 +41,12 @@ class Logger(object):
         Setting it to DETAIL will stop hint outputs. Setting it to
         HINT allows all output.
 
-        When structured_detail is True, FancyLogContext.detail(msg) expects
-        msg to be a dict and json dumps it when logging.
+        When structured_detail is True, logger.detail(msg) expects msg to be a
+        dict and json dumps it when logging.
 
-        When with_prefix is True, FancyLogContext.detail and
-        FancyLogContext.hint will prefix their output with "DETAIL: " and
+        When with_prefix is True, logger.detail and logger.hint will prefix
+        their output with "DETAIL: " and
         "HINT: ", respectively.
-
         """
 
         if fill_rate and capacity:
