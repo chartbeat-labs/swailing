@@ -48,8 +48,8 @@ That outputs to the supplied logger:
 
 ```
 this is the primary message: 12345
-this is an optional detail: syscall failed
-also an optional hint to do yadda yadda
+DETAIL: this is an optional detail: syscall failed
+HINT: also an optional hint to do yadda yadda
 ```
 
 But you can always fallback to regular style logging:
@@ -73,6 +73,34 @@ Outputs:
 
 ```
 this is the primary message: 12345
+```
+
+
+You can also disable the "DETAIL: ..." and "HINT: ..." prefix, e.g.
+
+```python
+logger = swailing.Logger(logging.getLogger(), with_prefix=False)
+```
+
+
+It might make sense to pass in a dictionary of information to `.detail` and have
+the logger json dump the dict. In that case you can do:
+
+```python
+logger = swailing.Logger(logging.getLogger(), structured_detail=True)
+
+with logger.info() as L:
+	L.primary('this is the primary message %d', 12345)
+	L.detail({'request_id': 12345, 'request_ts': 1454026366})
+	L.hint('some hinty stuff')
+```
+
+Outputs:
+
+```
+this is the primary message: 12345
+DETAIL: {"request_ts": 1454026366, "request_id": 12345}
+HINT: some hinty stuff
 ```
 
 Throttling:

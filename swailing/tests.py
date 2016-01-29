@@ -65,7 +65,8 @@ class TokenBucketTest(unittest.TestCase):
 class LoggerTest(unittest.TestCase):
     def test_fallback(self):
         mock_logger = mock.Mock()
-        logger = swailing.Logger(mock_logger, 10, 100)
+        logger = swailing.Logger(mock_logger, 10, 100,
+                                 structured_detail=False, with_prefix=False)
 
         logger.info("hello world!")
         mock_logger.log.assert_called_with(
@@ -75,7 +76,8 @@ class LoggerTest(unittest.TestCase):
 
     def test_context(self):
         mock_logger = mock.Mock()
-        logger = swailing.Logger(mock_logger, 10, 100)
+        logger = swailing.Logger(mock_logger, 10, 100,
+                                 structured_detail=False, with_prefix=False)
         with logger.info() as L:
             L.primary("primary")
             L.detail("detail")
@@ -92,7 +94,8 @@ class LoggerTest(unittest.TestCase):
         """Simple test without rate limiting."""
 
         mock_logger = mock.Mock()
-        logger = swailing.Logger(mock_logger)
+        logger = swailing.Logger(mock_logger,
+                                 structured_detail=False, with_prefix=False)
         with logger.info() as L:
             L.primary("primary")
             L.detail("detail")
@@ -109,7 +112,8 @@ class LoggerTest(unittest.TestCase):
     def test_throttle(self, clock):
         mock_logger = mock.Mock()
         clock.return_value = 1
-        logger = swailing.Logger(mock_logger, 1, 2)
+        logger = swailing.Logger(mock_logger, 1, 2,
+                                 structured_detail=False, with_prefix=False)
 
         # We'll write a buch of times, but since capacity is just 2,
         # we should expect the root_logger to only have been called
@@ -154,7 +158,8 @@ class LoggerTest(unittest.TestCase):
         clock.return_value += 100
         mock_logger = mock.Mock()
         logging.basicConfig()
-        logger = swailing.Logger(mock_logger, 1, 1)
+        logger = swailing.Logger(mock_logger, 1, 1,
+                                 structured_detail=False, with_prefix=False)
         for i in xrange(10):
             logger.error("foo")
         clock.return_value += 100
@@ -171,7 +176,12 @@ class LoggerTest(unittest.TestCase):
 
     def test_verbosity(self):
         mock_logger = mock.Mock()
-        logger = swailing.Logger(mock_logger, 10, 100, verbosity=swailing.PRIMARY)
+        logger = swailing.Logger(mock_logger,
+                                 10,
+                                 100,
+                                 verbosity=swailing.PRIMARY,
+                                 structured_detail=False,
+                                 with_prefix=False)
         with logger.info() as L:
             L.primary("primary")
             L.detail("detail")
@@ -183,7 +193,12 @@ class LoggerTest(unittest.TestCase):
         self.assertEqual(mock_logger.log.mock_calls, calls)
 
         mock_logger = mock.Mock()
-        logger = swailing.Logger(mock_logger, 10, 100, verbosity=swailing.DETAIL)
+        logger = swailing.Logger(mock_logger,
+                                 10,
+                                 100,
+                                 verbosity=swailing.DETAIL,
+                                 structured_detail=False,
+                                 with_prefix=False)
         with logger.info() as L:
             L.primary("primary")
             L.detail("detail")
@@ -196,7 +211,12 @@ class LoggerTest(unittest.TestCase):
         self.assertEqual(mock_logger.log.mock_calls, calls)
 
         mock_logger = mock.Mock()
-        logger = swailing.Logger(mock_logger, 10, 100, verbosity=swailing.HINT)
+        logger = swailing.Logger(mock_logger,
+                                 10,
+                                 100,
+                                 verbosity=swailing.HINT,
+                                 structured_detail=False,
+                                 with_prefix=False)
         with logger.info() as L:
             L.primary("primary")
             L.detail("detail")
@@ -208,3 +228,35 @@ class LoggerTest(unittest.TestCase):
             mock.call(logging.INFO, "hint"),
         ]
         self.assertEqual(mock_logger.log.mock_calls, calls)
+
+    def test_with_prefix(self):
+        mock_logger = mock.Mock()
+        logger = swailing.Logger(mock_logger, 10, 100,
+                                 structured_detail=False, with_prefix=True)
+        with logger.info() as L:
+            L.primary("primary")
+            L.detail("detail")
+            L.hint("hint")
+
+        calls = [
+            mock.call(logging.INFO, "primary"),
+            mock.call(logging.INFO, "DETAIL: detail"),
+            mock.call(logging.INFO, "HINT: hint"),
+        ]
+        mock_logger.log.assert_has_calls(calls)
+
+    def test_with_structured_detail(self):
+        mock_logger = mock.Mock()
+        logger = swailing.Logger(mock_logger, 10, 100,
+                                 structured_detail=True, with_prefix=False)
+        with logger.info() as L:
+            L.primary("primary")
+            L.detail({"my":"dict"})
+            L.hint("hint")
+
+        calls = [
+            mock.call(logging.INFO, "primary"),
+            mock.call(logging.INFO, '{"my": "dict"}'),
+            mock.call(logging.INFO, "hint"),
+        ]
+        mock_logger.log.assert_has_calls(calls)
