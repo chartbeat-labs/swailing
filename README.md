@@ -121,3 +121,10 @@ Outputs the first 1000 calls, and then:
 
 then what happens?
 ```
+
+
+Authors
+----
+
+* [Wes Chow](https://github.com/wesc)
+* [Adrian Kramer](https://github.com/ackramer)
